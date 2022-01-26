@@ -78,7 +78,7 @@ if __name__ == '__main__':
     betaMA = fitMA(data, policyEval, policyGen, transModel, featureModel, discount, vParams)
     
     # Get true projection value
-    betaProj = getProjection(data, policyEval, transModel, featureModel, discount)
+    betaProj = getProjection(data, policyEval, transGen, featureModel, discount)
     
     print('Simulation with N=',N,', T=', T, ', and random seed of ', randomSeed ,sep='')
     print('')

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import cplex
 from scipy.optimize import linprog
 from Vlearning import fitVlearning
 

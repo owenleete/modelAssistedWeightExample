@@ -5,6 +5,8 @@ import numpy as np
 from scipy.optimize import linprog
 from Vlearning import fitVlearning
 
+ACTION_COST = 0.5
+
 def setValues(tParams, pParams, rewardVec, discount):
     '''
     Calcualte the state-values [see Puterman (2005) or Sutton & Barto (2020) for definition of value] for each of the states
@@ -34,7 +36,7 @@ def setValues(tParams, pParams, rewardVec, discount):
         prob0 = 1-prob1
         params[i,:] = (prob0)*tParams[0,i,:] + prob1*tParams[1,i,:]
         rewardVec0 = rewardVec
-        rewardVec1 = rewardVec - 0.5
+        rewardVec1 = rewardVec - ACTION_COST
         avgReward[i] = np.sum(prob0*rewardVec0*tParams[0,i,:] + prob1*rewardVec1*tParams[1,i,:])    
     Aub=-(np.eye(params.shape[0])-discount*params)
     Bub=-avgReward
@@ -153,7 +155,7 @@ def getMAweights(dataObject, policyEval, policyGen, transModel, featureModel, di
     
     return MAWeights
 
-def fitMA(dataObject, policyEval, policyGen, transModel, featureModel, discount, vParams):
+def fitMA(dataObject, policyEval, policyGen, transModel, featureModel, discount, vLearningParameters):
     '''
     Fit the model assisted weight method.
 
@@ -169,7 +171,7 @@ def fitMA(dataObject, policyEval, policyGen, transModel, featureModel, discount,
         Transition dynamics model object for the MDP.
     featureModel : FeatureModel
         Model for the V-learning feature space.
-    vParams : VLearningParameters
+    vLearningParameters : VLearningParameters
         V-learning hyperparameter object.
     discount : float
         Discount factor gamma.
@@ -181,7 +183,7 @@ def fitMA(dataObject, policyEval, policyGen, transModel, featureModel, discount,
 
     '''
     MAWeights = getMAweights(dataObject, policyEval, policyGen, transModel, featureModel, discount)
-    betaMA, _ = fitVlearning(dataObject, policyEval, featureModel, discount, vParams, eeWeights=MAWeights)
+    betaMA, _ = fitVlearning(dataObject, policyEval, featureModel, discount, vLearningParameters, estimatingEquationWeights=MAWeights)
     return betaMA
 
 

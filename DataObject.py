@@ -3,6 +3,11 @@
 
 import numpy as np
 
+STATE_START = 2
+NEXT_STATE_START = 4
+NON_STATE_COLUMNS = 5
+
+
 ##############################
 ## Define helper functions  ##
 ##############################
@@ -46,7 +51,7 @@ def _generate(nSub, nObs, stateDim, policyObject, transitionModel, randomSeed):
     '''
     np.random.seed(randomSeed)
     # create data array
-    data = np.zeros(((nSub*nObs),(stateDim*2+5)))
+    data = np.zeros(((nSub*nObs),(stateDim*2+NON_STATE_COLUMNS)))
     # initalize counter to determine current row to assign to
     counter = 0
     nextState = np.zeros(stateDim)
@@ -190,7 +195,7 @@ class DataObject:
             The array of states.
 
         '''
-        return self.data[:,2:2+self.stateDim]
+        return self.data[:,STATE_START:STATE_START+self.stateDim]
 
     def getNextStates(self):
         '''
@@ -202,7 +207,7 @@ class DataObject:
             The array of nextStates.
 
         '''
-        return self.data[:,4+self.stateDim:4+2*self.stateDim]
+        return self.data[:,NEXT_STATE_START+self.stateDim:NEXT_STATE_START+2*self.stateDim]
 
     def getActions(self):
         '''
@@ -214,7 +219,7 @@ class DataObject:
             An array of the actions.
 
         '''
-        return self.data[:,2+self.stateDim]
+        return self.data[:,STATE_START+self.stateDim]
 
     def getProbs(self):
         '''
@@ -226,7 +231,7 @@ class DataObject:
             An array of the probabilities.
 
         '''
-        return self.data[:,3+self.stateDim]
+        return self.data[:,STATE_START+self.stateDim+1]
     
     def getRewards(self):
         '''
@@ -238,5 +243,5 @@ class DataObject:
             An array of the rewards.
 
         '''
-        return self.data[:,4+2*self.stateDim]
+        return self.data[:,NEXT_STATE_START+2*self.stateDim]
     

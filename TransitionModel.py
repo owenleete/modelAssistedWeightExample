@@ -3,6 +3,14 @@
 
 import numpy as np
 
+
+ACTION_COST = 0.5
+NUMBER_OF_ACTIONS = 2
+NUMBER_OF_STATES = 3
+STATE_COLUMN = 2
+ACTION_COLUMN = 3
+NEXT_STATE_COLUMN = 5
+
 ##############################
 ## Define helper functions  ##
 ##############################
@@ -113,7 +121,7 @@ def _getReward(state,action,nextState,rewardVec):
         Reward for given state, action, next state triple.
 
     '''
-    rewardVal = rewardVec[int(nextState[0])] - 0.5*action
+    rewardVal = rewardVec[int(nextState[0])] - ACTION_COST*action
     return rewardVal
 
 def _fitTransitionModel(data, dim):
@@ -137,10 +145,10 @@ def _fitTransitionModel(data, dim):
     ## dimension 1 is action
     ## dimension 2 is current state
     ## dimension 3 is next state
-    params = np.zeros((2,dim,dim))
+    params = np.zeros((NUMBER_OF_ACTIONS,dim,dim))
     # loop over each data point to count transitions for each state, action, next state combination
     for i in range(data.shape[0]):
-        params[int(data[i,3]),int(data[i,2]),int(data[i,5])] += 1
+        params[int(data[i,ACTION_COLUMN]),int(data[i,STATE_COLUMN]),int(data[i,NEXT_STATE_COLUMN])] += 1
     # normalize across rows to get probabilities
     for i in range(dim):
         params[0,i,:] = params[0,i,:]/np.sum(params[0,i,:])
@@ -177,7 +185,7 @@ class TransitionModel:
         Any changes to behaviour needs to be handeled by adding 
         more to __init__ function or with the helper functions.
     '''
-    def __init__(self, rewardVec, dim=3):
+    def __init__(self, rewardVec):
         '''
         Initialize object
             
@@ -197,9 +205,9 @@ class TransitionModel:
         Creates 'params' placeholder for parameters
 
         '''
-        self.dim = dim
+        self.dim = NUMBER_OF_STATES
         self.rewardVec = rewardVec
-        self.params = np.zeros((2,dim,dim))
+        self.params = np.zeros((NUMBER_OF_ACTIONS,self.dim,self.dim))
     
     def setParameters(self, params):
         '''
@@ -215,11 +223,11 @@ class TransitionModel:
         None.
 
         '''
-        assert params.shape == (2,self.dim,self.dim)
+        assert params.shape == (NUMBER_OF_ACTIONS,self.dim,self.dim)
         params = params.copy()
         for i in range(self.dim):
-            params[0,i,:] = params[0,i,:]/np.sum(params[0,i,:])
-            params[1,i,:] = params[1,i,:]/np.sum(params[1,i,:])
+            for j in range(NUMBER_OF_ACTIONS):
+                params[j,i,:] = params[j,i,:]/np.sum(params[j,i,:])
         self.params = params
     
     def getParameters(self):

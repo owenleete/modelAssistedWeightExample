@@ -3,20 +3,19 @@
 
 import numpy as np
 from DataObject import DataObject
-from random import sample
 
 class VLearningParameters:
-    def __init__(self, penVec=np.array([1*10**(-j) for j in range(1,9)]), nSplits=10, nRounds=5):
+    def __init__(self, penaltyVector=np.array([1*10**(-j) for j in range(1,9)]), numCVSplits=10, numCVRounds=5):
         '''
         Initalize object for V-learning hyperparameters
 
         Parameters
         ----------
-        penVec : 1d numpy array, optional
-            Different penalization values for V-learning. The default is np.array([1*10**(-j) for j in range(1,9)]).
-        nSplits : int, optional
+        penaltyVector : 1d numpy array, optional
+            Different penalization values for V-learning. The default is [0.1, 0.001, ... , 1e-8].
+        numCVSplits : int, optional
             Number of splits for k-fold cross validation. The default is 10.
-        nRounds : int, optional
+        numCVRounds : int, optional
             Number of rounds of k-fold corss validation. The default is 5.
 
         Returns
@@ -24,19 +23,19 @@ class VLearningParameters:
         None.
 
         '''
-        assert type(penVec) is np.ndarray, 'penVec must be a numpy array'
-        assert penVec.ndim==1, 'penVec must be a 1-dimensional numpy array'
-        self.penVec = penVec
+        assert type(penaltyVector) is np.ndarray, 'penaltyVector must be a numpy array'
+        assert penaltyVector.ndim==1, 'penaltyVector must be a 1-dimensional numpy array'
+        self.penaltyVector = penaltyVector
         try:
-            self.nSplits = int(nSplits)
+            self.numCVSplits = int(numCVSplits)
         except:
-            assert False,  'nSplits must be castable to integer'
+            assert False,  'numCVSplits must be castable to integer'
         try:
-            self.nRounds = int(nRounds)
+            self.numCVRounds = int(numCVRounds)
         except:
-            assert False,  'nRounds must be castable to integer'
+            assert False,  'numCVRounds must be castable to integer'
 
-def laBeta(featuresCurrent, featuresNext, eeWeights, probs, probsGen, reward, discount, nSub, penVal=0.0):
+def laBeta(featuresCurrent, featuresNext, estimatingEquationWeights, probs, probsGen, reward, discount, nSub, penaltyValue=0.0):
     '''
     Use linear algebra formulation to calculate V-learning parameter 'beta'
 
@@ -46,7 +45,7 @@ def laBeta(featuresCurrent, featuresNext, eeWeights, probs, probsGen, reward, di
         Features of current states.
     featuresNext : 2d numpy array
         Features of next states.
-    eeWeights : 2d numpy array
+    estimatingEquationWeights : 2d numpy array
         Estimating equation weights.
     probs : 1d numpy array
         Probability of selecting action under evaluation policy.
@@ -58,7 +57,7 @@ def laBeta(featuresCurrent, featuresNext, eeWeights, probs, probsGen, reward, di
         Discount factor gamma.
     nSub : int
         Number of subjects in the data.
-    penVal : float, optional
+    penaltyValue : float, optional
         L1 penalty on the parameters. The default is 0.0.
 
     Returns
@@ -70,25 +69,25 @@ def laBeta(featuresCurrent, featuresNext, eeWeights, probs, probsGen, reward, di
 
     prob_vec = probs/probsGen
 
-    C = eeWeights.T.dot((prob_vec[:,np.newaxis]*(discount*featuresNext - featuresCurrent)))/nSub
-    A = eeWeights.T.dot((reward*prob_vec)[:,np.newaxis])/nSub
+    C = estimatingEquationWeights.T.dot((prob_vec[:,np.newaxis]*(discount*featuresNext - featuresCurrent)))/nSub
+    A = estimatingEquationWeights.T.dot((reward*prob_vec)[:,np.newaxis])/nSub
 
     try:
-        temp = np.linalg.inv(np.matmul(C.T,C)+penVal*np.eye(C.shape[0]))
+        temp = np.linalg.inv(np.matmul(C.T,C)+penaltyValue*np.eye(C.shape[0]))
     except:
-        temp = np.linalg.pinv(np.matmul(C.T,C)+penVal*np.eye(C.shape[0]))
+        temp = np.linalg.pinv(np.matmul(C.T,C)+penaltyValue*np.eye(C.shape[0]))
 
     beta = np.matmul(temp,-np.matmul(C.T,A))
 
     return np.squeeze(beta)
 
-def getIndexList(nSplits, nSub):
+def getIndexList(numCVSplits, nSub):
     '''
     Get a list of random splits of the data
 
     Parameters
     ----------
-    nSplits : int
+    numCVSplits : int
         The number of splits "k" for k-fold validation.
     nSub : int
         The number of subjects in the data.
@@ -99,10 +98,10 @@ def getIndexList(nSplits, nSub):
         Array of ints corresponding to random splits of the data.
 
     '''
-    indexList = np.array(sample((list(range(nSplits))*int(np.ceil(nSub/nSplits)))[:nSub], nSub))
+    indexList = np.random.choice((list(range(numCVSplits))*int(np.ceil(nSub/numCVSplits)))[:nSub], nSub,replace=False)
     return indexList
 
-def splitData(dataObject, indexList, eeWeights, index):
+def splitData(dataObject, indexList, estimatingEquationWeights, index):
     '''
     Split data and estimating equation weights into training and testing data sets.
 
@@ -112,7 +111,7 @@ def splitData(dataObject, indexList, eeWeights, index):
         Object containing the data.
     indexList : 1d nupmy array
         random splits of the data.
-    eeWeights : 2d numpy array
+    estimatingEquationWeights : 2d numpy array
         estimating equation weights.
     index : int
         Which index to split on.
@@ -123,9 +122,9 @@ def splitData(dataObject, indexList, eeWeights, index):
         Training data.
     testData : DataObject
         Testing data.
-    trainEeWeights : 2d Numpy array
+    trainestimatingEquationWeights : 2d Numpy array
         training estimating equation weights.
-    testEeWeights : 2d Numpy array
+    testestimatingEquationWeights : 2d Numpy array
         testing estimating equation weights.
 
     '''
@@ -133,11 +132,11 @@ def splitData(dataObject, indexList, eeWeights, index):
     testData = DataObject(dataObject.stateDim)
     trainData.setData(dataObject.data[np.in1d(dataObject.data[:,0], np.where(indexList!=index)),:],len(np.where(indexList!=index)[0]),dataObject.nObs)
     testData.setData(dataObject.data[np.in1d(dataObject.data[:,0], np.where(indexList==index)),:],len(np.where(indexList==index)[0]),dataObject.nObs)
-    trainEeWeights = eeWeights[np.in1d(dataObject.data[:,0], np.where(indexList!=index)),:]
-    testEeWeights = eeWeights[np.in1d(dataObject.data[:,0], np.where(indexList==index)),:]
-    return trainData, testData, trainEeWeights, testEeWeights
+    trainestimatingEquationWeights = estimatingEquationWeights[np.in1d(dataObject.data[:,0], np.where(indexList!=index)),:]
+    testestimatingEquationWeights = estimatingEquationWeights[np.in1d(dataObject.data[:,0], np.where(indexList==index)),:]
+    return trainData, testData, trainestimatingEquationWeights, testestimatingEquationWeights
 
-def getBetaVLearn(dataObject, eeWeights, policyObject, featureModel, discount, penVal=0.0):
+def getBetaVLearn(dataObject, estimatingEquationWeights, policyObject, featureModel, discount, penaltyValue=0.0):
     '''
     Get beta for V-learning 
 
@@ -145,7 +144,7 @@ def getBetaVLearn(dataObject, eeWeights, policyObject, featureModel, discount, p
     ----------
     dataObject : DataObject
         Object containing the data.
-    eeWeights : 2d numpy array
+    estimatingEquationWeights : 2d numpy array
         estimating equation weights.
     policyObject : PolicyObject
         Evaluation policy.
@@ -153,7 +152,7 @@ def getBetaVLearn(dataObject, eeWeights, policyObject, featureModel, discount, p
         Model for the V-learning feature space.
     discount : float
         Discount factor gamma.
-    penVal : float, optional
+    penaltyValue : float, optional
         L1 penalty on the parameters. The default is 0.0.
 
     Returns
@@ -163,7 +162,7 @@ def getBetaVLearn(dataObject, eeWeights, policyObject, featureModel, discount, p
 
     '''
     states = dataObject.getStates()
-    beta = laBeta(featureModel.getFeaturesCurrent(dataObject), featureModel.getFeaturesNext(dataObject), eeWeights, policyObject.getProbs(states, dataObject.getActions()), dataObject.getProbs(), dataObject.getRewards(), discount, dataObject.nSub, penVal)
+    beta = laBeta(featureModel.getFeaturesCurrent(dataObject), featureModel.getFeaturesNext(dataObject), estimatingEquationWeights, policyObject.getProbs(states, dataObject.getActions()), dataObject.getProbs(), dataObject.getRewards(), discount, dataObject.nSub, penaltyValue)
     return beta
 
 def tdError(beta, dataObject, featureModel, policyEval, discount):
@@ -196,27 +195,27 @@ def tdError(beta, dataObject, featureModel, policyEval, discount):
     reward = dataObject.getRewards()
     return (((probs/probsGen)*(reward + discount*valNext - valCurrent)).sum(axis=0)/dataObject.nSub)
 
-def selectTuningParameter(penVec, dataObject, eeWeights, policyEval, featureModel, discount, nSplits=5, nRounds=5):
+def selectTuningParameter(penaltyVector, dataObject, estimatingEquationWeights, policyEval, featureModel, discount, numCVSplits=5, numCVRounds=5):
     '''
     Find the best value for the penalty term with k-fold cross validation
 
     Parameters
     ----------
-    penVec : 1d numpy array
+    penaltyVector : 1d numpy array
             Different penalization values for V-learning.
     dataObject : DataObject
         Object containing the data.
-    eeWeights : 2d numpy array
-        estimating equation weights.
+    estimatingEquationWeights : 2d numpy array
+        estimating equation weights (denoted as psi in paper).
     policyEval : PolicyObject
         Evaluation policy.
     featureModel : FeatureModel
         Model for the V-learning feature space.
     discount : float
         Discount factor gamma.
-    nSplits : int, optional
+    numCVSplits : int, optional
         The number of splits "k" for k-fold validation.
-    nRounds : int, optional
+    numCVRounds : int, optional
         Number of rounds of k-fold corss validation. The default is 5.
 
     Returns
@@ -225,19 +224,19 @@ def selectTuningParameter(penVec, dataObject, eeWeights, policyEval, featureMode
         The optimal penalty value to minimize k-fold TD error.
 
     '''
-    lambdaResFull = np.zeros_like(penVec)
-    for k in range(nRounds):
-        indexList = getIndexList(nSplits,dataObject.nSub)
-        lambdaRes = np.zeros_like(penVec)
-        for i in range(nSplits):
-            trainData, testData, trainEeWeights, _ = splitData(dataObject, indexList, eeWeights, i)
-            for j in range(penVec.size):
-                beta = getBetaVLearn(trainData, trainEeWeights, policyEval, featureModel, discount, penVec[j])
-                lambdaRes[j] += tdError(beta, testData, featureModel, policyEval, discount)
-        lambdaResFull += np.abs(lambdaRes)
-    return penVec[np.argmin(np.abs(lambdaResFull))]
+    penaltyResFull = np.zeros_like(penaltyVector)
+    for k in range(numCVRounds):
+        indexList = getIndexList(numCVSplits,dataObject.nSub)
+        penaltyRes = np.zeros_like(penaltyVector)
+        for i in range(numCVSplits):
+            trainData, testData, trainEstimatingEquationWeights, _ = splitData(dataObject, indexList, estimatingEquationWeights, i)
+            for j in range(penaltyVector.size):
+                beta = getBetaVLearn(trainData, trainEstimatingEquationWeights, policyEval, featureModel, discount, penaltyVector[j])
+                penaltyRes[j] += tdError(beta, testData, featureModel, policyEval, discount)
+        penaltyResFull += np.abs(penaltyRes)
+    return penaltyVector[np.argmin(np.abs(penaltyResFull))]
 
-def fitVlearning(dataObject, policyEval, featureModel, discount, vParams, eeWeights=None):
+def fitVlearning(dataObject, policyEval, featureModel, discount, vLearningParameters, estimatingEquationWeights=None):
     '''
     Find the optimal penalty value and calcualte V-learning solution
 
@@ -251,24 +250,24 @@ def fitVlearning(dataObject, policyEval, featureModel, discount, vParams, eeWeig
         Model for the V-learning feature space.
     discount : float
         Discount factor gamma.
-    vParams : VLearningParameters
+    vLearningParameters : VLearningParameters
         V-learning hyperparameter object.
-    eeWeights : 2d numpy array, optional
-        Estimating equation weights. The default is None.
+    estimatingEquationWeights : 2d numpy array, optional
+        Estimating equation weights (denoted as psi in paper). The default is None.
 
     Returns
     -------
     beta : 1d numpy array
         Parameter solution to V-learning approach.
-    penVal : float
+    penaltyValue : float
         The optimal penalty value to minimize k-fold TD error.
 
     '''
-    if eeWeights is None:
-        eeWeights = featureModel.getFeaturesCurrent(dataObject)
-    penVal = selectTuningParameter(vParams.penVec, dataObject, eeWeights, policyEval, featureModel, discount, vParams.nSplits, vParams.nRounds)
-    beta = getBetaVLearn(dataObject, eeWeights, policyEval, featureModel, discount, penVal)
-    return beta, penVal
+    if estimatingEquationWeights is None:
+        estimatingEquationWeights = featureModel.getFeaturesCurrent(dataObject)
+    penaltyValue = selectTuningParameter(vLearningParameters.penaltyVector, dataObject, estimatingEquationWeights, policyEval, featureModel, discount, vLearningParameters.numCVSplits, vLearningParameters.numCVRounds)
+    beta = getBetaVLearn(dataObject, estimatingEquationWeights, policyEval, featureModel, discount, penaltyValue)
+    return beta, penaltyValue
 
 
 

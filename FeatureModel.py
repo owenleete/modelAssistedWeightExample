@@ -3,6 +3,8 @@
 
 import numpy as np
 
+FEATURE_DIMENSION = 2
+
 
 def _getFeature(state):
     '''
@@ -19,7 +21,7 @@ def _getFeature(state):
         The feature space of the supplied state.
 
     '''
-    features = np.ones(2)
+    features = np.ones(FEATURE_DIMENSION)
     features[1] = state[0]-1
     return features
 
@@ -39,7 +41,7 @@ def _getFeatures(states):
 
     '''
     n = states.shape[0]
-    features = np.zeros((n,2))
+    features = np.zeros((n,FEATURE_DIMENSION))
     for i in range(n):
         features[i,:] = _getFeature(states[i,:])
     return features

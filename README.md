@@ -49,7 +49,7 @@ The code has been simplified as much as possible, but it still requires numpy an
 The following command will run the example:
 
 ```
-python runExample.py <-n #> <-t #> <-s #>
+python runExample.py -n 50 -t 25 -s 1
 ```
 
 where 'n' is the number of subjects, 't' is the number of observations per subject, and 's' fixes the state of the random number generator (all are integers).
